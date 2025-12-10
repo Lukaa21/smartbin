@@ -46,6 +46,7 @@ $IRRELEVANT_LABELS = [
     'Signage',
     'Symbol',
     'Circle',
+    'Color',
     'Rectangle',
     'Design',
     'Art',
@@ -141,6 +142,16 @@ $uploaded_image = null;
 
 // Start session to store uploaded image
 session_start();
+
+// Obriši sesiju i stare podatke kada se stranica učitava (GET zahtev)
+// Ali ne briši ako je POST zahtev (upload slike)
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    // Obriši sve podatke iz sesije
+    session_unset();
+    session_destroy();
+    // Pokreni novu sesiju
+    session_start();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -308,261 +319,17 @@ if (isset($_SESSION['uploaded_image'])) {
 
 <head>
     <meta charset="utf-8">
-    <title>SmartBin - Prepoznavanje Objekata za Reciklažu</title>
+    <title>BinGenius</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #111;
-            padding: 24px;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 32px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        h1 {
-            margin: 0 0 12px;
-            font-size: 28px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-
-        label.button {
-            display: inline-block;
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        label.button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        .upload-section {
-            margin-bottom: 24px;
-            padding-bottom: 24px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .result-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-top: 24px;
-        }
-
-        @media (max-width: 768px) {
-            .result-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .image-preview {
-            background: #f8f9fa;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .image-preview img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .analysis-panel {
-            background: #f8f9fa;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .category-badge {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .category-Plastic {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-
-        .category-Glass {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .category-Metal {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-        }
-
-        .category-Paper {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: white;
-        }
-
-        .category-Unknown {
-            background: #9e9e9e;
-            color: white;
-        }
-
-        .info-row {
-            margin: 12px 0;
-            padding: 12px;
-            background: white;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #555;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        .info-value {
-            font-size: 16px;
-            color: #111;
-        }
-
-        .confidence-bar {
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s ease;
-        }
-
-        .labels-list {
-            margin-top: 16px;
-        }
-
-        .labels-list h3 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .label-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: white;
-            margin-bottom: 6px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .label-name {
-            color: #333;
-        }
-
-        .label-score {
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .recycling-info {
-            margin-top: 20px;
-            padding: 16px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .recycling-info h3 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 8px;
-        }
-
-        .recycling-info p {
-            font-size: 14px;
-            color: #555;
-            line-height: 1.6;
-        }
-
-        .error-message {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            color: white;
-            padding: 16px 20px;
-            border-radius: 8px;
-            margin-top: 16px;
-            font-weight: 500;
-        }
-
-        .small-note {
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 2px solid #f0f0f0;
-            font-size: 12px;
-            color: #999;
-            line-height: 1.6;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="container">
-        <h1>🗑️ SmartBin - Prepoznavanje Objekata</h1>
-        <p class="subtitle">Uploadujte sliku objekta koji želite da reciklirate. Sistem će automatski prepoznati objekat
-            i odrediti u koju kategoriju reciklaže spada.</p>
-
+        <h1>BinGenius - Prepoznavanje Objekata</h1>
         <div class="upload-section">
             <form method="post" enctype="multipart/form-data">
-                <label class="button">📷 Izaberite Sliku
+                <label class="button">Izaberite Sliku
                     <input type="file" name="image" accept="image/*" style="display:none" onchange="this.form.submit()">
                 </label>
             </form>
@@ -614,17 +381,10 @@ if (isset($_SESSION['uploaded_image'])) {
                     ];
                     ?>
 
-                    <?php if (isset($recycling_tips[$analysis_result['category']])): ?>
-                        <div class="recycling-info">
-                            <h3>♻️ Informacije o Reciklaži</h3>
-                            <p><?= $recycling_tips[$analysis_result['category']] ?></p>
-                        </div>
-                    <?php endif; ?>
-
                     <!-- Relevantne labele (samo top 5) -->
                     <?php if (!empty($analysis_result['labels'])): ?>
                         <div class="labels-list">
-                            <h3>🔍 Detektirane Karakteristike</h3>
+                            <h3>Detektovane Karakteristike</h3>
                             <?php
                             $top_labels = array_slice($analysis_result['labels'], 0, 5);
                             foreach ($top_labels as $l):
@@ -639,12 +399,6 @@ if (isset($_SESSION['uploaded_image'])) {
                 </div>
             </div>
         <?php endif; ?>
-
-        <div class="small-note">
-            <strong>Napomena:</strong> Ovaj sistem koristi Google Vision API za prepoznavanje objekata.
-            Tačnost prepoznavanja zavisi od kvaliteta slike i uslova osvetljenja.
-            Za najbolje rezultate, slikajte objekat na svetloj pozadini sa dobrim osvetljenjem.
-        </div>
     </div>
 </body>
 
